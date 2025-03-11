@@ -31,22 +31,27 @@
             this.pbrProgress = new System.Windows.Forms.ProgressBar();
             this.btnStartStop = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.gbxProgress = new System.Windows.Forms.GroupBox();
+            this.lblTime = new System.Windows.Forms.Label();
+            this.gbxErrors = new System.Windows.Forms.GroupBox();
+            this.lblCurrentFile = new System.Windows.Forms.Label();
+            this.gbxProgress.SuspendLayout();
             this.SuspendLayout();
             // 
             // pbrProgress
             // 
             this.pbrProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pbrProgress.Location = new System.Drawing.Point(12, 12);
+            this.pbrProgress.Location = new System.Drawing.Point(6, 19);
             this.pbrProgress.MarqueeAnimationSpeed = 1;
             this.pbrProgress.Name = "pbrProgress";
-            this.pbrProgress.Size = new System.Drawing.Size(500, 23);
+            this.pbrProgress.Size = new System.Drawing.Size(553, 23);
             this.pbrProgress.TabIndex = 0;
             // 
             // btnStartStop
             // 
             this.btnStartStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnStartStop.Location = new System.Drawing.Point(437, 103);
+            this.btnStartStop.Location = new System.Drawing.Point(502, 226);
             this.btnStartStop.Name = "btnStartStop";
             this.btnStartStop.Size = new System.Drawing.Size(75, 23);
             this.btnStartStop.TabIndex = 1;
@@ -57,27 +62,75 @@
             // lblStatus
             // 
             this.lblStatus.AutoSize = true;
-            this.lblStatus.Location = new System.Drawing.Point(12, 38);
+            this.lblStatus.Location = new System.Drawing.Point(15, 66);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(69, 39);
+            this.lblStatus.Size = new System.Drawing.Size(37, 26);
             this.lblStatus.TabIndex = 2;
-            this.lblStatus.Text = "Current File: -\r\nFiles: -\r\nSize: -";
+            this.lblStatus.Text = "Files: -\r\nSize: -";
+            // 
+            // gbxProgress
+            // 
+            this.gbxProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.gbxProgress.Controls.Add(this.lblCurrentFile);
+            this.gbxProgress.Controls.Add(this.lblTime);
+            this.gbxProgress.Controls.Add(this.pbrProgress);
+            this.gbxProgress.Controls.Add(this.lblStatus);
+            this.gbxProgress.Enabled = false;
+            this.gbxProgress.Location = new System.Drawing.Point(12, 12);
+            this.gbxProgress.Name = "gbxProgress";
+            this.gbxProgress.Size = new System.Drawing.Size(565, 101);
+            this.gbxProgress.TabIndex = 3;
+            this.gbxProgress.TabStop = false;
+            this.gbxProgress.Text = "Progress";
+            // 
+            // lblTime
+            // 
+            this.lblTime.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblTime.AutoSize = true;
+            this.lblTime.BackColor = System.Drawing.Color.Transparent;
+            this.lblTime.Location = new System.Drawing.Point(426, 66);
+            this.lblTime.Name = "lblTime";
+            this.lblTime.Size = new System.Drawing.Size(39, 26);
+            this.lblTime.TabIndex = 3;
+            this.lblTime.Text = "Time: -\r\nETA: -";
+            // 
+            // gbxErrors
+            // 
+            this.gbxErrors.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.gbxErrors.Enabled = false;
+            this.gbxErrors.Location = new System.Drawing.Point(12, 119);
+            this.gbxErrors.Name = "gbxErrors";
+            this.gbxErrors.Size = new System.Drawing.Size(565, 101);
+            this.gbxErrors.TabIndex = 4;
+            this.gbxErrors.TabStop = false;
+            this.gbxErrors.Text = "Errors";
+            // 
+            // lblCurrentFile
+            // 
+            this.lblCurrentFile.AutoSize = true;
+            this.lblCurrentFile.Location = new System.Drawing.Point(6, 45);
+            this.lblCurrentFile.Name = "lblCurrentFile";
+            this.lblCurrentFile.Size = new System.Drawing.Size(69, 13);
+            this.lblCurrentFile.TabIndex = 4;
+            this.lblCurrentFile.Text = "Current File: -";
             // 
             // ArchiveProgressForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(524, 138);
-            this.Controls.Add(this.lblStatus);
+            this.ClientSize = new System.Drawing.Size(589, 261);
+            this.Controls.Add(this.gbxErrors);
+            this.Controls.Add(this.gbxProgress);
             this.Controls.Add(this.btnStartStop);
-            this.Controls.Add(this.pbrProgress);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
+            this.MinimumSize = new System.Drawing.Size(500, 300);
             this.Name = "ArchiveProgressForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Archive Progress";
+            this.gbxProgress.ResumeLayout(false);
+            this.gbxProgress.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -86,6 +139,10 @@
         private System.Windows.Forms.ProgressBar pbrProgress;
         private System.Windows.Forms.Button btnStartStop;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.GroupBox gbxProgress;
+        private System.Windows.Forms.Label lblTime;
+        private System.Windows.Forms.GroupBox gbxErrors;
+        private System.Windows.Forms.Label lblCurrentFile;
     }
 }
 

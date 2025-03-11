@@ -15,6 +15,7 @@ namespace Archiver
     {
         ArchiveSet archiveSet;
         bool isRunning;
+        DateTime startTime;
         Thread workerThread;
 
         public ArchiveProgressForm()
@@ -32,14 +33,21 @@ namespace Archiver
         {
             if (this.isRunning)
             {
-                //TODO abort
+                if (MessageBox.Show("Do you really want to cancel the current action?", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                {
+                    //TODO abort
+                }
             }
             else
             {
+                this.isRunning = true;
                 btnStartStop.Text = "Abort";
                 pbrProgress.Style = ProgressBarStyle.Marquee;
                 pbrProgress.Maximum = 100;
                 pbrProgress.Value = 0;
+                gbxProgress.Enabled = true;
+                gbxErrors.Enabled = true;
+                this.startTime = DateTime.Now;
 
                 this.workerThread = new Thread(new ThreadStart(this.progress));
                 this.workerThread.IsBackground = true;
@@ -55,22 +63,41 @@ namespace Archiver
             {
                 this.Invoke((MethodInvoker)(() =>
                 {
-                    if( status.IsProcessing)
+                    TimeSpan elapsedTime = (DateTime.Now - this.startTime);
+
+                    //TODO shorten path?
+                    lblCurrentFile.Text = "Current File: " + (string.IsNullOrWhiteSpace(status.CurrentFile) ? "-" : status.CurrentFile);
+                    if (status.IsProcessing)
                     {
-                        lblStatus.Text = "Current File: " + (string.IsNullOrWhiteSpace(status.CurrentFile) ? "-" : status.CurrentFile) + "\r\nFiles: " + status.ProcessedFiles + " / " + status.TotalChangedFileCount + "\r\nSize: " + HumanReadableSize(status.ProcessedFileSize) + " / " + HumanReadableSize(status.TotalChangedFileSize);
-                        if(pbrProgress.Style != ProgressBarStyle.Continuous)
+                        lblStatus.Text = "Files: " + status.ProcessedFiles + " / " + status.TotalFileCount + "\r\nSize: " + HumanReadableSize(status.UpdatedFileSize + status.ImportedFileSize) + " / " + HumanReadableSize(status.TotalUpdateFileSize + status.TotalImportFileSize);
+                        if (pbrProgress.Style != ProgressBarStyle.Continuous)
                         {
                             pbrProgress.Style = ProgressBarStyle.Continuous;
                             pbrProgress.Maximum = 100000;
                         }
-                        const double fileWeight = 65536;
-                        double maxVal = (double)status.TotalChangedFileSize + fileWeight * (double)status.TotalChangedFileCount;
-                        double currentVal = (double)status.ProcessedFileSize + fileWeight * (double)status.ProcessedFiles;
-                        pbrProgress.Value = Math.Min(pbrProgress.Maximum, (int)((double)pbrProgress.Maximum * currentVal / maxVal));
+                        // heuristic for a smooth progress bar:
+                        // - every file is treated as 256k fix overhead to account for file creation
+                        // - update file size is counted twice as it requires read and write operations
+                        const double fileWeight = 256 * 1024;
+                        double maxVal = fileWeight * (double)status.TotalFileCount + 2 * (double)status.TotalUpdateFileSize + (double)status.TotalImportFileSize;
+                        double currentVal = fileWeight * (double)status.ProcessedFiles + 2 * (double)status.UpdatedFileSize + (double)status.ImportedFileSize;
+                        TimeSpan? remainingTime = null;
+                        if (maxVal > 0.001)
+                        {
+                            pbrProgress.Value = Math.Min(pbrProgress.Maximum, (int)((double)pbrProgress.Maximum * currentVal / maxVal));
+                        }
+
+                        if (currentVal > 0.001)
+                        {
+                            remainingTime = TimeSpan.FromSeconds((maxVal - currentVal) * (elapsedTime.TotalSeconds / currentVal));
+                        }
+
+                        lblTime.Text = "Time: " + elapsedTime.ToString(@"mm\:ss") + "\r\nETA: " + (remainingTime.HasValue ? remainingTime.Value.ToString(@"mm\:ss") : "-");
                     }
                     else
                     {
-                        lblStatus.Text = "Current File: " + (string.IsNullOrWhiteSpace(status.CurrentFile) ? "-" : status.CurrentFile) + "\r\nFiles: " + status.TotalChangedFileCount + "\r\nSize: " + HumanReadableSize(status.TotalChangedFileSize);
+                        lblStatus.Text = "Files: " + status.TotalFileCount + "\r\nSize: " + HumanReadableSize(status.TotalUpdateFileSize + status.TotalImportFileSize);
+                        lblTime.Text = "Time: " + elapsedTime.ToString(@"mm\:ss") + "\r\nETA: -";
                     }
                 }));
                 this.lastNotifyTick = Environment.TickCount;
@@ -106,10 +133,15 @@ namespace Archiver
             this.Invoke((MethodInvoker)(() =>
             {
                 btnStartStop.Text = "Start";
-                lblStatus.Text = "Current File: -\r\nFiles: -\r\nSize: -";
+                lblCurrentFile.Text = "Current File: -";
+                lblStatus.Text = "Files: -\r\nSize: -";
+                lblTime.Text = "Time: -\r\nETA: -";
                 pbrProgress.Style = ProgressBarStyle.Continuous;
                 pbrProgress.Maximum = 100;
                 pbrProgress.Value = 0;
+                gbxProgress.Enabled = false;
+                // gbxErrors should stay enabled so the user can scroll errors after processing
+                this.isRunning = false;
             }));
         }
 
