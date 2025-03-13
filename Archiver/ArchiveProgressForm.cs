@@ -23,8 +23,8 @@ namespace Archiver
             InitializeComponent();
 
             this.archiveSet = new ArchiveSet();
-            this.archiveSet.BackupDir = @"G:\Backup\Savegames";
-            //this.archiveSet.BackupDir = @"G:\Backup\Archiver Test\src";
+            //this.archiveSet.BackupDir = @"G:\Backup\Savegames";
+            this.archiveSet.BackupDir = @"G:\Backup\Archiver Test\src";
             this.archiveSet.DestinationDir = @"G:\Backup\Archiver Test\dst";
             this.archiveSet.ExcludedPaths.Add(@"G:\Backup\Archiver Test\src\pictures\signal-2023-04-29-17-37-42-876.jpg");
         }

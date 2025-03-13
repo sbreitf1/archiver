@@ -139,7 +139,7 @@ namespace Archiver
             ctx.SetCurrentAction("Gather source files to archive");
             List<GatheredFile> files = new List<GatheredFile>();
             List<GatheredDir> dirs = new List<GatheredDir>();
-            GatherChangedFiles(ctx, archivedFiles, files, dirs, this.BackupDir);
+            GatherChangedFiles(ctx, archivedFiles, files, dirs, this.BackupDir, true);
             Console.WriteLine("found " + files.Count + " files and " + dirs.Count + " directories in source directory");
 
             ctx.SetCurrentAction("Archive files");
@@ -186,6 +186,7 @@ namespace Archiver
             foreach (GatheredFile f in files)
             {
                 ProcessFile(ctx, f);
+                archiveLastSeen[GetRelPathFromSrc(f.Path).ToLower()] = ctx.Now;
             }
 
             try
@@ -258,10 +259,16 @@ namespace Archiver
             public DateTime LastAccess;
         }
 
-        private void GatherChangedFiles(Context ctx, Dictionary<string, ArchivedFile> archivedFiles, List<GatheredFile> files, List<GatheredDir> dirs, string dir)
+        private void GatherChangedFiles(Context ctx, Dictionary<string, ArchivedFile> archivedFiles, List<GatheredFile> files, List<GatheredDir> dirs, string dir, bool isRoot)
         {
             foreach (string subdir in Directory.GetDirectories(dir))
             {
+                if (isRoot && IsReservedName(Path.GetFileName(subdir)))
+                {
+                    ctx.AddWarnMessage("Directory " + subdir + " cannot be archived. It is using a reserved name");
+                    continue;
+                }
+
                 DirectoryInfo di = new DirectoryInfo(subdir);
                 GatheredDir gd = new GatheredDir();
                 gd.Path = subdir;
@@ -270,11 +277,17 @@ namespace Archiver
                 gd.LastAccess = di.LastAccessTime;
                 dirs.Add(gd);
 
-                GatherChangedFiles(ctx, archivedFiles, files, dirs, subdir);
+                GatherChangedFiles(ctx, archivedFiles, files, dirs, subdir, false);
             }
 
             foreach (string file in Directory.GetFiles(dir))
             {
+                if (isRoot && IsReservedName(Path.GetFileName(file)))
+                {
+                    ctx.AddWarnMessage("File " + file + " cannot be archived. It is using a reserved name");
+                    continue;
+                }
+
                 ctx.Status.CurrentFile = file;
                 ctx.NotifyStatusChanged();
                 GatheredFile gf = GatherFile(ctx, archivedFiles, file);
@@ -517,6 +530,11 @@ namespace Archiver
         private string FormatLastSeen(DateTime lastSeen)
         {
             return lastSeen.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK");
+        }
+
+        private bool IsReservedName(string fileName)
+        {
+            return fileName.Equals(ArchiveMetaDir, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveLastSeenFile, StringComparison.InvariantCultureIgnoreCase);
         }
     }
 }
