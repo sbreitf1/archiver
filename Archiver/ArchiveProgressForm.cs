@@ -46,7 +46,8 @@ namespace Archiver
                 pbrProgress.Maximum = 100;
                 pbrProgress.Value = 0;
                 gbxProgress.Enabled = true;
-                gbxErrors.Enabled = true;
+                gbxEvents.Enabled = true;
+                tbxEvents.Text = "";
                 this.startTime = DateTime.Now;
 
                 this.workerThread = new Thread(new ThreadStart(this.progress));
@@ -65,9 +66,18 @@ namespace Archiver
                 {
                     TimeSpan elapsedTime = (DateTime.Now - this.startTime);
 
+                    if (string.IsNullOrWhiteSpace(status.CurrentAction))
+                    {
+                        gbxProgress.Text = "Progress";
+                    }
+                    else
+                    {
+                        gbxProgress.Text = "Progress [" + status.CurrentAction + "]";
+                    }
+
                     //TODO shorten path?
                     lblCurrentFile.Text = "Current File: " + (string.IsNullOrWhiteSpace(status.CurrentFile) ? "-" : status.CurrentFile);
-                    if (status.IsProcessing)
+                    if (status.IsArchiving)
                     {
                         lblStatus.Text = "Files: " + status.ProcessedFiles + " / " + status.TotalFileCount + "\r\nSize: " + HumanReadableSize(status.UpdatedFileSize + status.ImportedFileSize) + " / " + HumanReadableSize(status.TotalUpdateFileSize + status.TotalImportFileSize);
                         if (pbrProgress.Style != ProgressBarStyle.Continuous)
@@ -102,6 +112,14 @@ namespace Archiver
                 }));
                 this.lastNotifyTick = Environment.TickCount;
             }
+        }
+
+        private void NotifyMessage(string msg)
+        {
+            this.Invoke((MethodInvoker)(() =>
+            {
+                tbxEvents.Text += msg + "\r\n";
+            }));
         }
 
         private string HumanReadableSize(long size)
@@ -139,6 +157,7 @@ namespace Archiver
                 pbrProgress.Style = ProgressBarStyle.Continuous;
                 pbrProgress.Maximum = 100;
                 pbrProgress.Value = 0;
+                gbxProgress.Text = "Progress";
                 gbxProgress.Enabled = false;
                 // gbxErrors should stay enabled so the user can scroll errors after processing
                 this.isRunning = false;
@@ -149,15 +168,14 @@ namespace Archiver
         {
             try
             {
-                this.archiveSet.Do((status) => { this.NotifyStatus(status); });
-
+                this.archiveSet.Do((status) => { this.NotifyStatus(status); }, (msg) => { this.NotifyMessage(msg); });
             }
-            /*catch (Exception ex)
+            catch (Exception ex)
             {
                 this.Invoke((MethodInvoker)(() => {
                     MessageBox.Show("Archiving failed: " + ex.Message + "\n\n" + ex.StackTrace, this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }));
-            }*/
+            }
             finally
             {
                 this.NotifyProgressEnded();

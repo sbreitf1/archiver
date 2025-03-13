@@ -32,10 +32,12 @@
             this.btnStartStop = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
             this.gbxProgress = new System.Windows.Forms.GroupBox();
-            this.lblTime = new System.Windows.Forms.Label();
-            this.gbxErrors = new System.Windows.Forms.GroupBox();
             this.lblCurrentFile = new System.Windows.Forms.Label();
+            this.lblTime = new System.Windows.Forms.Label();
+            this.gbxEvents = new System.Windows.Forms.GroupBox();
+            this.tbxEvents = new System.Windows.Forms.TextBox();
             this.gbxProgress.SuspendLayout();
+            this.gbxEvents.SuspendLayout();
             this.SuspendLayout();
             // 
             // pbrProgress
@@ -51,7 +53,7 @@
             // btnStartStop
             // 
             this.btnStartStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnStartStop.Location = new System.Drawing.Point(502, 226);
+            this.btnStartStop.Location = new System.Drawing.Point(502, 275);
             this.btnStartStop.Name = "btnStartStop";
             this.btnStartStop.Size = new System.Drawing.Size(75, 23);
             this.btnStartStop.TabIndex = 1;
@@ -84,6 +86,15 @@
             this.gbxProgress.TabStop = false;
             this.gbxProgress.Text = "Progress";
             // 
+            // lblCurrentFile
+            // 
+            this.lblCurrentFile.AutoSize = true;
+            this.lblCurrentFile.Location = new System.Drawing.Point(6, 45);
+            this.lblCurrentFile.Name = "lblCurrentFile";
+            this.lblCurrentFile.Size = new System.Drawing.Size(69, 13);
+            this.lblCurrentFile.TabIndex = 4;
+            this.lblCurrentFile.Text = "Current File: -";
+            // 
             // lblTime
             // 
             this.lblTime.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -95,34 +106,39 @@
             this.lblTime.TabIndex = 3;
             this.lblTime.Text = "Time: -\r\nETA: -";
             // 
-            // gbxErrors
+            // gbxEvents
             // 
-            this.gbxErrors.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.gbxEvents.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.gbxErrors.Enabled = false;
-            this.gbxErrors.Location = new System.Drawing.Point(12, 119);
-            this.gbxErrors.Name = "gbxErrors";
-            this.gbxErrors.Size = new System.Drawing.Size(565, 101);
-            this.gbxErrors.TabIndex = 4;
-            this.gbxErrors.TabStop = false;
-            this.gbxErrors.Text = "Errors";
+            this.gbxEvents.Controls.Add(this.tbxEvents);
+            this.gbxEvents.Enabled = false;
+            this.gbxEvents.Location = new System.Drawing.Point(12, 119);
+            this.gbxEvents.Name = "gbxEvents";
+            this.gbxEvents.Size = new System.Drawing.Size(565, 150);
+            this.gbxEvents.TabIndex = 4;
+            this.gbxEvents.TabStop = false;
+            this.gbxEvents.Text = "Events";
             // 
-            // lblCurrentFile
+            // tbxEvents
             // 
-            this.lblCurrentFile.AutoSize = true;
-            this.lblCurrentFile.Location = new System.Drawing.Point(6, 45);
-            this.lblCurrentFile.Name = "lblCurrentFile";
-            this.lblCurrentFile.Size = new System.Drawing.Size(69, 13);
-            this.lblCurrentFile.TabIndex = 4;
-            this.lblCurrentFile.Text = "Current File: -";
+            this.tbxEvents.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tbxEvents.Font = new System.Drawing.Font("Courier New", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tbxEvents.Location = new System.Drawing.Point(3, 16);
+            this.tbxEvents.Multiline = true;
+            this.tbxEvents.Name = "tbxEvents";
+            this.tbxEvents.ReadOnly = true;
+            this.tbxEvents.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.tbxEvents.Size = new System.Drawing.Size(559, 131);
+            this.tbxEvents.TabIndex = 0;
+            this.tbxEvents.WordWrap = false;
             // 
             // ArchiveProgressForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(589, 261);
-            this.Controls.Add(this.gbxErrors);
+            this.ClientSize = new System.Drawing.Size(589, 310);
+            this.Controls.Add(this.gbxEvents);
             this.Controls.Add(this.gbxProgress);
             this.Controls.Add(this.btnStartStop);
             this.MinimumSize = new System.Drawing.Size(500, 300);
@@ -130,6 +146,8 @@
             this.Text = "Archive Progress";
             this.gbxProgress.ResumeLayout(false);
             this.gbxProgress.PerformLayout();
+            this.gbxEvents.ResumeLayout(false);
+            this.gbxEvents.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -141,8 +159,9 @@
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.GroupBox gbxProgress;
         private System.Windows.Forms.Label lblTime;
-        private System.Windows.Forms.GroupBox gbxErrors;
+        private System.Windows.Forms.GroupBox gbxEvents;
         private System.Windows.Forms.Label lblCurrentFile;
+        private System.Windows.Forms.TextBox tbxEvents;
     }
 }
 

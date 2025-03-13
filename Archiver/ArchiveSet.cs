@@ -7,15 +7,15 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 
 namespace Archiver
 {
     class ArchiveSet
     {
         private const string ArchiveMetaDir = ".archive-meta";
-        private const string ArchiveMetaLastStatFile = "last-stat";
         private const string ArchiveMetaSHA256File = "sha256";
-        private const string ArchiveMetaLastSeenFile = "last-seen";
+        private const string ArchiveLastSeenFile = ".archive-last-seen";
 
         public string ID { get; set; }
         public string Name { get; set; }
@@ -29,13 +29,15 @@ namespace Archiver
         }
 
         public delegate void NotifyStatusHandler(Status status);
+        public delegate void NotifyMessageHandler(string msg);
 
         public struct Status
         {
+            public string CurrentAction;
             public long TotalFileCount;
             public long TotalUpdateFileSize;
             public long TotalImportFileSize;
-            public bool IsProcessing;
+            public bool IsArchiving;
             public string CurrentFile;
             public long ProcessedFiles;
             public long UpdatedFileSize;
@@ -45,30 +47,121 @@ namespace Archiver
         private class Context
         {
             public Status Status;
-            private NotifyStatusHandler h;
+            private NotifyStatusHandler hStatus;
+            private NotifyMessageHandler hMsg;
 
-            public Context(NotifyStatusHandler h)
+            public DateTime Now { get; private set; }
+
+            public Context(NotifyStatusHandler hStatus, NotifyMessageHandler hMsg)
             {
-                this.h = h;
+                this.hStatus = hStatus;
+                this.hMsg = hMsg;
+                this.Now = DateTime.Now;
+            }
+
+            public void SetCurrentAction(string action)
+            {
+                this.Status.CurrentAction = action;
+                NotifyStatusChanged();
             }
 
             public void NotifyStatusChanged()
             {
-                h.Invoke(this.Status);
+                this.hStatus.Invoke(this.Status);
+            }
+
+            public void AddErrMessage(string msg)
+            {
+                this.hMsg.Invoke("[ERR] " + msg);
+            }
+            public void AddWarnMessage(string msg)
+            {
+                this.hMsg.Invoke("[WARN] " + msg);
             }
         }
 
-        public void Do(NotifyStatusHandler h)
+        public void Do(NotifyStatusHandler hStatus, NotifyMessageHandler hMsg)
         {
-            Context ctx = new Context(h);
+            Context ctx = new Context(hStatus, hMsg);
 
+            ctx.SetCurrentAction("Build archive index");
+            Dictionary<string, ArchivedFile> archivedFiles = new Dictionary<string, ArchivedFile>();
+            try
+            {
+                CollectArchivedFiles(ctx, archivedFiles, this.DestinationDir, true);
+            }
+            catch (Exception ex)
+            {
+                ctx.AddErrMessage("Failed to read archived files: " + ex.Message);
+                throw ex;
+            }
+            Console.WriteLine(archivedFiles.Count + " files already in archive dir");
+
+            ctx.SetCurrentAction("Prepare last seen index");
+            Dictionary<string, DateTime> archiveLastSeen = new Dictionary<string, DateTime>();
+            foreach (ArchivedFile af in archivedFiles.Values)
+            {
+                archiveLastSeen[GetRelPathFromDst(af.Path).ToLower()] = ctx.Now;
+            }
+
+            string lastSeenFile = Path.Combine(this.DestinationDir, ArchiveLastSeenFile);
+            try
+            {
+                if (File.Exists(lastSeenFile))
+                {
+                    string[] lines = File.ReadAllLines(lastSeenFile);
+                    int parseFailCount = 0;
+                    foreach (string l in lines)
+                    {
+                        string[] parts = l.Split('|');
+                        string fileName = string.Join("|", parts, 0, parts.Length - 1);
+                        try
+                        {
+                            DateTime lastSeen = ParseLastSeen(parts[parts.Length - 1]);
+                            archiveLastSeen[fileName.ToLower()] = lastSeen;
+                        }
+                        catch
+                        {
+                            parseFailCount++;
+                        }
+                    }
+                    if (parseFailCount > 0)
+                    {
+                        ctx.AddWarnMessage("Failed to parse " + parseFailCount + " last seen time(s)");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ctx.AddWarnMessage("Failed read " + ArchiveLastSeenFile + ": " + ex.Message);
+            }
+
+            ctx.SetCurrentAction("Gather source files to archive");
             List<GatheredFile> files = new List<GatheredFile>();
             List<GatheredDir> dirs = new List<GatheredDir>();
-            GatherChangedFiles(ctx, files, dirs, this.BackupDir);
+            GatherChangedFiles(ctx, archivedFiles, files, dirs, this.BackupDir);
+            Console.WriteLine("found " + files.Count + " files and " + dirs.Count + " directories in source directory");
 
+            ctx.SetCurrentAction("Archive files");
             string metaDir = GetMetaPath("");
-            Directory.CreateDirectory(metaDir);
-            File.SetAttributes(metaDir, File.GetAttributes(metaDir) | FileAttributes.Hidden);
+            try
+            {
+                Directory.CreateDirectory(metaDir);
+            }
+            catch (Exception ex)
+            {
+                ctx.AddErrMessage("Failed to prepare " + ArchiveMetaDir + " directory: " + ex.Message);
+                throw ex;
+            }
+            try
+            {
+                File.SetAttributes(metaDir, File.GetAttributes(metaDir) | FileAttributes.Hidden);
+            }
+            catch (Exception ex)
+            {
+                ctx.AddErrMessage("Failed to set " + ArchiveMetaDir + " directory attributes: " + ex.Message);
+                throw ex;
+            }
 
             foreach (GatheredDir d in dirs)
             {
@@ -83,18 +176,77 @@ namespace Archiver
                 }
                 catch (Exception ex)
                 {
-                    //TODO append error to list
+                    ctx.AddWarnMessage("Failed to set directory attributes of " + d.Path + ": " + ex.Message);
                 }
             }
 
-            ctx.Status.IsProcessing = true;
+            ctx.Status.IsArchiving = true;
             ctx.NotifyStatusChanged();
-
-            //TODO somehow set directory timestamps
 
             foreach (GatheredFile f in files)
             {
                 ProcessFile(ctx, f);
+            }
+
+            try
+            {
+                List<string> outLines = new List<string>();
+                foreach (KeyValuePair<string, DateTime> kvp in archiveLastSeen)
+                {
+                    outLines.Add(kvp.Key + "|" + FormatLastSeen(kvp.Value));
+                }
+                if (File.Exists(lastSeenFile))
+                {
+                    File.Delete(lastSeenFile);
+                }
+                File.WriteAllLines(lastSeenFile, outLines.ToArray());
+            }
+            catch (Exception ex)
+            {
+                ctx.AddWarnMessage("Failed to write " + ArchiveLastSeenFile + ": " + ex.Message);
+            }
+            try
+            {
+                File.SetAttributes(lastSeenFile, File.GetAttributes(lastSeenFile) | FileAttributes.Hidden);
+            }
+            catch (Exception ex)
+            {
+                ctx.AddWarnMessage("Failed to set file attributes of " + ArchiveLastSeenFile + ": " + ex.Message);
+            }
+        }
+
+        private struct ArchivedFile
+        {
+            public string Path;
+            public long Size;
+            public DateTime Created;
+            public DateTime LastModified;
+            public DateTime LastAccess;
+        }
+
+        private void CollectArchivedFiles(Context ctx, Dictionary<string, ArchivedFile> archivedFiles, string dir, bool isRoot)
+        {
+            foreach (string subdir in Directory.GetDirectories(dir))
+            {
+                if (!isRoot || !Path.GetFileName(subdir).Equals(ArchiveMetaDir, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    CollectArchivedFiles(ctx, archivedFiles, subdir, false);
+                }
+            }
+
+            foreach (string file in Directory.GetFiles(dir))
+            {
+                if (!isRoot || !Path.GetFileName(file).Equals(ArchiveLastSeenFile, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    FileInfo fi = new FileInfo(file);
+                    ArchivedFile af = new ArchivedFile();
+                    af.Path = file;
+                    af.Size = fi.Length;
+                    af.Created = fi.CreationTime;
+                    af.LastModified = fi.LastWriteTime;
+                    af.LastAccess = fi.LastAccessTime;
+                    archivedFiles.Add(file.ToLower(), af);
+                }
             }
         }
 
@@ -106,7 +258,7 @@ namespace Archiver
             public DateTime LastAccess;
         }
 
-        private void GatherChangedFiles(Context ctx, List<GatheredFile> files, List<GatheredDir> dirs, string dir)
+        private void GatherChangedFiles(Context ctx, Dictionary<string, ArchivedFile> archivedFiles, List<GatheredFile> files, List<GatheredDir> dirs, string dir)
         {
             foreach (string subdir in Directory.GetDirectories(dir))
             {
@@ -118,14 +270,14 @@ namespace Archiver
                 gd.LastAccess = di.LastAccessTime;
                 dirs.Add(gd);
 
-                GatherChangedFiles(ctx, files, dirs, subdir);
+                GatherChangedFiles(ctx, archivedFiles, files, dirs, subdir);
             }
 
             foreach (string file in Directory.GetFiles(dir))
             {
                 ctx.Status.CurrentFile = file;
                 ctx.NotifyStatusChanged();
-                GatheredFile gf = GatherFile(ctx, file);
+                GatheredFile gf = GatherFile(ctx, archivedFiles, file);
                 files.Add(gf);
                 ctx.Status.TotalFileCount++;
                 if (gf.Action == ArchiveAction.AddOrUpdate)
@@ -148,12 +300,12 @@ namespace Archiver
             public DateTime LastModified;
         }
 
-        private GatheredFile GatherFile(Context ctx, string path)
+        private GatheredFile GatherFile(Context ctx, Dictionary<string, ArchivedFile> archivedFiles, string path)
         {
             FileInfo fi = new FileInfo(path);
             GatheredFile gf = new GatheredFile();
             gf.Path = path;
-            gf.Action = GetArchiveAction(path, fi);
+            gf.Action = GetArchiveAction(archivedFiles, path, fi);
             gf.Size = fi.Length;
             gf.LastModified = fi.LastWriteTime;
             return gf;
@@ -175,48 +327,40 @@ namespace Archiver
             Import,
         }
 
-        private ArchiveAction GetArchiveAction(string file, FileInfo fi)
+        private ArchiveAction GetArchiveAction(Dictionary<string, ArchivedFile> archivedFiles, string file, FileInfo fi)
         {
             string dataPath = GetDataPath(file);
-            string metaPath = GetMetaPath(file);
-
-            FileInfo fia = new FileInfo(dataPath);
-            if (fia.Exists && fia.Length == fi.Length)
+            if (archivedFiles.ContainsKey(dataPath.ToLower()))
             {
-                // data file exists and has expected size
+                // data file exists
 
-                // check for meta data
-                if (!Directory.Exists(metaPath))
+                ArchivedFile af = archivedFiles[dataPath.ToLower()];
+                if (af.LastModified == fi.LastWriteTime)
                 {
-                    //TODO check small sample of file ranges and last modified to be equal
-                    return ArchiveAction.Import;
-                }
-                else
-                {
-                    if (!File.Exists(Path.Combine(metaPath, ArchiveMetaLastStatFile)))
+                    // data file exists and has expected size and attributes
+
+
+                    // check for meta data
+                    string metaPath = GetMetaPath(file);
+                    if (!Directory.Exists(metaPath))
                     {
-                        // last-stat meta file missing
-                        return ArchiveAction.AddOrUpdate;
+                        // not meta-data exist, check if the existing file can be used as archived file
+
+                        //TODO check small sample of file ranges to be equal
+                        return ArchiveAction.Import;
                     }
-                    string lastStatStr = File.ReadAllText(Path.Combine(metaPath, ArchiveMetaLastStatFile));
-                    if (lastStatStr != FormatLastStat(File.GetLastWriteTime(file), fi.Length))
+                    else
                     {
-                        // file was modified since last archive
-                        return ArchiveAction.AddOrUpdate;
+                        if (!File.Exists(Path.Combine(metaPath, ArchiveMetaSHA256File)))
+                        {
+                            // sha256 meta file missing
+                            return ArchiveAction.AddOrUpdate;
+                        }
+                        //TODO check sha256 has correct format (no actual checksum check)
+
+                        // data file seems to be equal to source file
+                        return ArchiveAction.None;
                     }
-                    if (!File.Exists(Path.Combine(metaPath, ArchiveMetaSHA256File)))
-                    {
-                        // sha256 meta file missing
-                        return ArchiveAction.AddOrUpdate;
-                    }
-                    //TODO check sha256 has correct format (no actual checksum check)
-                    if (!File.Exists(Path.Combine(metaPath, ArchiveMetaLastSeenFile)))
-                    {
-                        // last-seen meta file missing
-                        return ArchiveAction.AddOrUpdate;
-                    }
-                    //TODO check last-seen has correct format
-                    return ArchiveAction.None;
                 }
             }
 
@@ -253,8 +397,6 @@ namespace Archiver
         private void DoActionNone(Context ctx, GatheredFile file)
         {
             // no data update, but remember when the file has last been seen in the source
-            string metaPath = GetMetaPath(file.Path);
-            File.WriteAllText(Path.Combine(metaPath, ArchiveMetaLastSeenFile), FormatLastSeen(DateTime.Now));
         }
 
         private void DoActionAddOrUpdate(Context ctx, GatheredFile file)
@@ -266,14 +408,6 @@ namespace Archiver
             if (File.Exists(Path.Combine(metaPath, ArchiveMetaSHA256File)))
             {
                 File.Delete(Path.Combine(metaPath, ArchiveMetaSHA256File));
-            }
-            if (File.Exists(Path.Combine(metaPath, ArchiveMetaLastStatFile)))
-            {
-                File.Delete(Path.Combine(metaPath, ArchiveMetaLastStatFile));
-            }
-            if (File.Exists(Path.Combine(metaPath, ArchiveMetaLastSeenFile)))
-            {
-                File.Delete(Path.Combine(metaPath, ArchiveMetaLastSeenFile));
             }
 
             string dataPath = GetDataPath(file.Path);
@@ -315,8 +449,6 @@ namespace Archiver
 
             // write meta data (also indicates complete archive of this file)
             File.WriteAllText(Path.Combine(metaPath, ArchiveMetaSHA256File), hashStr);
-            File.WriteAllText(Path.Combine(metaPath, ArchiveMetaLastStatFile), FormatLastStat(File.GetLastWriteTime(file.Path), fileSize));
-            File.WriteAllText(Path.Combine(metaPath, ArchiveMetaLastSeenFile), FormatLastSeen(DateTime.Now));
         }
 
         private void DoActionImport(Context ctx, GatheredFile file)
@@ -343,14 +475,20 @@ namespace Archiver
                 }
             }
 
-            FileInfo fi = new FileInfo(file.Path);
-
             // write meta data (also indicates complete archive of this file)
             string metaPath = GetMetaPath(file.Path);
             Directory.CreateDirectory(metaPath);
             File.WriteAllText(Path.Combine(metaPath, ArchiveMetaSHA256File), hashStr);
-            File.WriteAllText(Path.Combine(metaPath, ArchiveMetaLastStatFile), FormatLastStat(File.GetLastWriteTime(file.Path), fileSize));
-            File.WriteAllText(Path.Combine(metaPath, ArchiveMetaLastSeenFile), FormatLastSeen(DateTime.Now));
+        }
+
+        private string GetRelPathFromSrc(string srcPath)
+        {
+            return srcPath.Substring(this.BackupDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        private string GetRelPathFromDst(string dstPath)
+        {
+            return dstPath.Substring(this.DestinationDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
 
         private string GetDataPath(string srcPath)
@@ -359,7 +497,7 @@ namespace Archiver
             {
                 return this.DestinationDir;
             }
-            return Path.Combine(this.DestinationDir, srcPath.Substring(this.BackupDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            return Path.Combine(this.DestinationDir, GetRelPathFromSrc(srcPath));
         }
 
         private string GetMetaPath(string srcPath)
@@ -368,12 +506,12 @@ namespace Archiver
             {
                 return Path.Combine(this.DestinationDir, ArchiveMetaDir);
             }
-            return Path.Combine(this.DestinationDir, ArchiveMetaDir, srcPath.Substring(this.BackupDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            return Path.Combine(this.DestinationDir, ArchiveMetaDir, GetRelPathFromSrc(srcPath));
         }
 
-        private string FormatLastStat(DateTime lastModified, long size)
+        private DateTime ParseLastSeen(string str)
         {
-            return lastModified.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK") + "|" + size;
+            return DateTime.ParseExact(str, "yyyy-MM-dd'T'HH:mm:ss.fffK", null);
         }
 
         private string FormatLastSeen(DateTime lastSeen)
