@@ -143,7 +143,9 @@
             this.Controls.Add(this.btnStartStop);
             this.MinimumSize = new System.Drawing.Size(500, 300);
             this.Name = "ArchiveProgressForm";
-            this.Text = "Archive Progress";
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.Text = "Archive -";
             this.gbxProgress.ResumeLayout(false);
             this.gbxProgress.PerformLayout();
             this.gbxEvents.ResumeLayout(false);

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -11,7 +12,7 @@ using System.Windows.Forms.VisualStyles;
 
 namespace Archiver
 {
-    class ArchiveSet
+    public class ArchiveSet
     {
         private const string ArchiveMetaDir = ".archive-meta";
         private const string ArchiveMetaSHA256File = "sha256";
@@ -25,6 +26,18 @@ namespace Archiver
 
         public ArchiveSet()
         {
+            this.ID = Guid.NewGuid().ToString();
+            this.Name = "New Archive Set";
+            this.ExcludedPaths = new List<string>();
+        }
+
+        public ArchiveSet(JObject jSet)
+        {
+            this.ID = jSet.GetValue("ID").Value<string>();
+            this.Name = jSet.GetValue("Name").Value<string>();
+            this.BackupDir = jSet.GetValue("LocalDir").Value<string>();
+            this.DestinationDir = jSet.GetValue("DestinationDir").Value<string>();
+            //TODO read excluded paths
             this.ExcludedPaths = new List<string>();
         }
 

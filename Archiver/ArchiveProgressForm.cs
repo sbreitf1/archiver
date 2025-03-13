@@ -11,29 +11,26 @@ using System.Windows.Forms;
 
 namespace Archiver
 {
-    public partial class ArchiveProgressForm: Form
+    public partial class ArchiveProgressForm : Form
     {
         ArchiveSet archiveSet;
         bool isRunning;
         DateTime startTime;
         Thread workerThread;
 
-        public ArchiveProgressForm()
+        public ArchiveProgressForm(ArchiveSet set)
         {
             InitializeComponent();
 
-            this.archiveSet = new ArchiveSet();
-            //this.archiveSet.BackupDir = @"G:\Backup\Savegames";
-            this.archiveSet.BackupDir = @"G:\Backup\Archiver Test\src";
-            this.archiveSet.DestinationDir = @"G:\Backup\Archiver Test\dst";
-            this.archiveSet.ExcludedPaths.Add(@"G:\Backup\Archiver Test\src\pictures\signal-2023-04-29-17-37-42-876.jpg");
+            this.archiveSet = set;
+            this.Text = set.Name + " - Archiver";
         }
 
         private void btnStartStop_Click(object sender, EventArgs e)
         {
             if (this.isRunning)
             {
-                if (MessageBox.Show("Do you really want to cancel the current action?", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                if (MessageBox.Show(this, "Do you really want to cancel the current action?", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
                 {
                     //TODO abort
                 }
@@ -124,11 +121,11 @@ namespace Archiver
 
         private string HumanReadableSize(long size)
         {
-            if (size<1000)
+            if (size < 1000)
             {
                 return size + " Bytes";
             }
-            else if (size<1000000)
+            else if (size < 1000000)
             {
                 return Math.Round(size / 1024.0, 2) + " KiB";
             }
@@ -140,7 +137,7 @@ namespace Archiver
             {
                 return Math.Round(size / (1024.0 * 1024.0 * 1024.0), 2) + " GiB";
             }
-            else 
+            else
             {
                 return Math.Round(size / (1024.0 * 1024.0 * 1024.0 * 1024.0), 2) + " TiB";
             }
@@ -172,8 +169,9 @@ namespace Archiver
             }
             catch (Exception ex)
             {
-                this.Invoke((MethodInvoker)(() => {
-                    MessageBox.Show("Archiving failed: " + ex.Message + "\n\n" + ex.StackTrace, this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    MessageBox.Show(this, "Archiving failed: " + ex.Message + "\n\n" + ex.StackTrace, this.Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }));
             }
             finally

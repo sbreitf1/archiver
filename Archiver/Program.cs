@@ -16,7 +16,7 @@ namespace Archiver
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ArchiveProgressForm());
+            Application.Run(new MainForm());
         }
     }
 }
