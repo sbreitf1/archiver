@@ -31,6 +31,8 @@ namespace Archiver
 
         private void btnOK_Click(object sender, EventArgs e)
         {
+            //TODO check for data in dst dir
+
             this.ArchiveSet.Name = tbxName.Text;
             if (string.IsNullOrWhiteSpace(this.ArchiveSet.BackupDir))
             {

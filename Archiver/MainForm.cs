@@ -85,6 +85,19 @@ namespace Archiver
 
         private void btnDeleteSet_Click(object sender, EventArgs e)
         {
+            if (lvwSets.SelectedIndices.Count != 1)
+            {
+                MessageBox.Show(this, "Select only one Archive Set.", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (MessageBox.Show(this, "Delete selected archive set(s)?", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+            {
+                //TODO delete multiple selected sets
+                this.sets.RemoveAt(lvwSets.SelectedIndices[0]);
+                SaveArchiveSets();
+                ShowSets();
+            }
         }
 
         private void btnExecuteSet_Click(object sender, EventArgs e)
@@ -127,14 +140,7 @@ namespace Archiver
             JArray jSetsArray = new JArray();
             foreach(ArchiveSet set in this.sets)
             {
-                JObject jSet = new JObject();
-                jSet.Add("ID", set.ID);
-                jSet.Add("Name", set.Name);
-                jSet.Add("LocalDir", set.BackupDir);
-                jSet.Add("DestinationDir", set.DestinationDir);
-                //TODO write excluded paths
-                //jSet.Add("ExcludedPaths", set.ExcludedPaths);
-                jSetsArray.Add(jSet);
+                jSetsArray.Add(set.ToJObject());
             }
 
             JObject jRoot = new JObject();

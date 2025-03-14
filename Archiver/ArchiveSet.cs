@@ -1,20 +1,15 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Windows.Forms.VisualStyles;
 
 namespace Archiver
 {
     public class ArchiveSet
     {
         private const string ArchiveMetaDir = ".archive-meta";
+        private const string ArchiveSetFile = ".archiveset.json";
         private const string ArchiveMetaSHA256File = "sha256";
         private const string ArchiveLastSeenFile = ".archive-last-seen";
 
@@ -39,6 +34,17 @@ namespace Archiver
             this.DestinationDir = jSet.GetValue("DestinationDir").Value<string>();
             //TODO read excluded paths
             this.ExcludedPaths = new List<string>();
+        }
+
+        public JObject ToJObject()
+        {
+            JObject jSet = new JObject();
+            jSet.Add("ID", this.ID);
+            jSet.Add("Name", this.Name);
+            jSet.Add("LocalDir", this.BackupDir);
+            jSet.Add("DestinationDir", this.DestinationDir);
+            //TODO write excluded paths
+            return jSet;
         }
 
         public delegate void NotifyStatusHandler(Status status);
@@ -226,6 +232,29 @@ namespace Archiver
             catch (Exception ex)
             {
                 ctx.AddWarnMessage("Failed to set file attributes of " + ArchiveLastSeenFile + ": " + ex.Message);
+            }
+
+            string clonedArchiveSetFile = Path.Combine(this.DestinationDir, ArchiveSetFile);
+            try
+            {
+                JObject jSet = ToJObject();
+                if (File.Exists(clonedArchiveSetFile))
+                {
+                    File.Delete(clonedArchiveSetFile);
+                }
+                File.WriteAllText(clonedArchiveSetFile, jSet.ToString());
+            }
+            catch (Exception ex)
+            {
+                ctx.AddWarnMessage("Failed to export " + ArchiveSetFile + ": " + ex.Message);
+            }
+            try
+            {
+                File.SetAttributes(clonedArchiveSetFile, File.GetAttributes(clonedArchiveSetFile) | FileAttributes.Hidden);
+            }
+            catch (Exception ex)
+            {
+                ctx.AddWarnMessage("Failed to set file attributes of " + ArchiveSetFile + ": " + ex.Message);
             }
         }
 
@@ -547,7 +576,7 @@ namespace Archiver
 
         private bool IsReservedName(string fileName)
         {
-            return fileName.Equals(ArchiveMetaDir, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveLastSeenFile, StringComparison.InvariantCultureIgnoreCase);
+            return fileName.Equals(ArchiveMetaDir, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveLastSeenFile, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveSetFile, StringComparison.InvariantCultureIgnoreCase);
         }
     }
 }
