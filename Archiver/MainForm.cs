@@ -95,7 +95,23 @@ namespace Archiver
         private void btnExecuteSet_Click(object sender, EventArgs e)
         {
             ArchiveSet set = this.sets[lvwSets.SelectedIndices[0]];
-            ArchiveProgressForm dialog = new ArchiveProgressForm(set);
+
+            if (!ArchiveSet.DirContainsArchive(set.DestinationDir))
+            {
+                if (MessageBox.Show(this, "The selected Destination Directory " + set.DestinationDir + " does not contain an Archive or meta data is incomplete.\r\n\r\nA new Archive Destination will be initialized and existing data will be imported.", this.Text, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Cancel)
+                {
+                    return;
+                }
+            }
+            else if (ArchiveSet.GetArchiveSetID(set.DestinationDir) != set.ID)
+            {
+                if (MessageBox.Show(this, "The selected Destination Directory " + set.DestinationDir + " contains a different Archive set.\r\n\r\nUsing the current configuration might overwrite data from another Archive Set.\r\n\r\nContinue only if you know what you are doing!", this.Text, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Cancel)
+                {
+                    return;
+                }
+            }
+
+                ArchiveProgressForm dialog = new ArchiveProgressForm(set);
             dialog.Owner = this;
             try
             {

@@ -578,5 +578,17 @@ namespace Archiver
         {
             return fileName.Equals(ArchiveMetaDir, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveLastSeenFile, StringComparison.InvariantCultureIgnoreCase) || fileName.Equals(ArchiveSetFile, StringComparison.InvariantCultureIgnoreCase);
         }
+
+        public static bool DirContainsArchive(string dir)
+        {
+            return Directory.Exists(Path.Combine(dir, ArchiveMetaDir)) && File.Exists(Path.Combine(dir, ArchiveSetFile));
+        }
+
+        public static string GetArchiveSetID(string dir)
+        {
+            string str = File.ReadAllText(Path.Combine(dir, ArchiveSetFile));
+            JObject jSet = JObject.Parse(str);
+            return jSet["ID"].Value<string>();
+        }
     }
 }
