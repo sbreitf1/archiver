@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="Archiver" Language="1033" Version="0.1.0" Manufacturer="Simon Breitfelder" UpgradeCode="209a354c-2006-44f4-9b68-71aca0105efa">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+		<!--<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER"/>
+
+		<UI>
+			<UIRef Id="WixUI_InstallDir" />
+		</UI>-->
+
+		<DirectoryRef Id="ProgramMenuFolder">
+			<Component Id="ApplicationShortcut" Guid="f3eb9939-8b46-4cea-9755-b922541d31e7">
+				<Shortcut Id="ApplicationStartMenuShortcut" Name="Archiver" Description="Image Preview application" Target="[#Archiver.exe]" WorkingDirectory="ProgramMenuFolder"/>
+				<RemoveFile Id="RemoveApplicationShortcut" Name="Archiver.lnk" On="uninstall"/>
+				<RegistryValue Root="HKCU" Key="Software\SimonBreitfelder\Archiver" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+
+		<Feature Id="ProductFeature" Title="Archiver" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+			<ComponentRef Id="ApplicationShortcut" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="Installer" />
+			</Directory>
+			<Directory Id="ProgramMenuFolder">
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<Component Id="ArchiverExecutable">
+				<File Id="Archiver.exe" Source="$(var.SolutionDir)\Archiver\bin\$(var.Configuration)\Archiver.exe" KeyPath="yes" />
+				<File Id="Archiver.exe.config" Source="$(var.SolutionDir)\Archiver\bin\$(var.Configuration)\Archiver.exe.config" />
+			</Component>
+			<Component Id="LibNewtonsoftJson">
+				<File Id="Newtonsoft.Json.dll" Source="$(var.SolutionDir)\Archiver\bin\$(var.Configuration)\Newtonsoft.Json.dll" KeyPath="yes" />
+				<File Id="Newtonsoft.Json.xml" Source="$(var.SolutionDir)\Archiver\bin\$(var.Configuration)\Newtonsoft.Json.xml" />
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>

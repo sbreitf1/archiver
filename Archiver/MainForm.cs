@@ -1,15 +1,7 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Archiver
@@ -91,7 +83,7 @@ namespace Archiver
                 return;
             }
 
-            if (MessageBox.Show(this, "Delete selected archive set(s)?", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+            if (MessageBox.Show(this, "Delete selected Archive Set(s)? No data will be deleted, the Archive Sets will only disappear from this list.", this.Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
             {
                 //TODO delete multiple selected sets
                 this.sets.RemoveAt(lvwSets.SelectedIndices[0]);
